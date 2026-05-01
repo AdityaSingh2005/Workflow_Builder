@@ -30,13 +30,70 @@ export const requestInputFieldSchema = z.object({
   value: z.string(),
 });
 
-export const workflowNodeSchema = z.object({
-  id: z.string().min(1),
-  type: workflowNodeTypeSchema,
-  position: workflowPositionSchema,
-  data: z.record(z.string(), z.unknown()),
-  locked: z.boolean().optional(),
+export const requestInputsNodeDataSchema = z.object({
+  label: z.literal("Request-Inputs"),
+  fields: z.array(requestInputFieldSchema),
 });
+
+export const cropImageNodeDataSchema = z.object({
+  label: z.string().min(1),
+  inputImageUrl: z.string().optional(),
+  xPercent: z.number().min(0).max(100),
+  yPercent: z.number().min(0).max(100),
+  widthPercent: z.number().min(0).max(100),
+  heightPercent: z.number().min(0).max(100),
+  outputImageUrl: z.string().optional(),
+});
+
+export const geminiNodeDataSchema = z.object({
+  label: z.string().min(1),
+  modelLabel: z.string().min(1),
+  modelId: z.string().optional(),
+  prompt: z.string().optional(),
+  systemPrompt: z.string().optional(),
+  imageUrls: z.array(z.string()),
+  videoUrls: z.array(z.string()),
+  audioUrls: z.array(z.string()),
+  fileUrls: z.array(z.string()),
+  settingsCollapsed: z.boolean(),
+  responseText: z.string().optional(),
+});
+
+export const responseNodeDataSchema = z.object({
+  label: z.literal("Response"),
+  result: z.string().optional(),
+});
+
+export const workflowNodeSchema = z.discriminatedUnion("type", [
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("requestInputs"),
+    position: workflowPositionSchema,
+    data: requestInputsNodeDataSchema,
+    locked: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("cropImage"),
+    position: workflowPositionSchema,
+    data: cropImageNodeDataSchema,
+    locked: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("gemini"),
+    position: workflowPositionSchema,
+    data: geminiNodeDataSchema,
+    locked: z.boolean().optional(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    type: z.literal("response"),
+    position: workflowPositionSchema,
+    data: responseNodeDataSchema,
+    locked: z.boolean().optional(),
+  }),
+]);
 
 export const workflowEdgeSchema = z.object({
   id: z.string().min(1),
@@ -61,4 +118,3 @@ export const workflowGraphSchema = z.object({
 });
 
 export type WorkflowGraphInput = z.infer<typeof workflowGraphSchema>;
-

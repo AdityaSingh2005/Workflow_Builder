@@ -29,3 +29,15 @@ npm audit
 ```
 
 Copy `.env.example` into your local env file and fill real service keys before testing authenticated flows or provider integrations.
+
+## Phase 2 Database And Auth
+
+Dashboard workflow persistence is implemented through Clerk-scoped API routes:
+
+- `GET /api/workflows`
+- `POST /api/workflows`
+- `GET /api/workflows/:workflowId`
+- `PATCH /api/workflows/:workflowId`
+- `DELETE /api/workflows/:workflowId`
+
+Every workflow query is scoped by the authenticated Clerk user id. New workflows are created with locked `Request-Inputs` and `Response` nodes already present in the graph.

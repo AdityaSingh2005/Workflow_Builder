@@ -136,6 +136,11 @@ export type WorkflowSummary = {
   updatedAt: string;
 };
 
+export type WorkflowDetail = WorkflowSummary & {
+  graph: WorkflowGraph;
+  createdAt: string;
+};
+
 export type NodeExecutionResult = {
   nodeId: WorkflowNodeId;
   nodeLabel: string;
@@ -159,4 +164,3 @@ export type WorkflowRun = {
   durationMs?: number;
   nodeRuns: NodeExecutionResult[];
 };
-

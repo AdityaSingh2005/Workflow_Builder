@@ -1,0 +1,51 @@
+{
+  "name": "nextflow-workflow-builder",
+  "version": "0.1.0",
+  "private": true,
+  "overrides": {
+    "@hono/node-server": "^1.19.13",
+    "cookie": "^0.7.2",
+    "postcss": "^8.5.13",
+    "systeminformation": "^5.30.8"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postinstall": "prisma generate",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "trigger:dev": "npx trigger.dev@4.4.5 dev"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "7.3.0",
+    "@google/generative-ai": "0.24.1",
+    "@prisma/adapter-pg": "7.8.0",
+    "@prisma/client": "7.8.0",
+    "@trigger.dev/sdk": "4.4.5",
+    "@xyflow/react": "12.10.2",
+    "clsx": "2.1.1",
+    "lucide-react": "1.14.0",
+    "next": "16.2.4",
+    "pg": "8.20.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "tailwind-merge": "3.5.0",
+    "zod": "3.25.76",
+    "zustand": "5.0.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.4",
+    "@trigger.dev/build": "4.4.5",
+    "@types/node": "25.6.0",
+    "@types/pg": "8.20.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.4",
+    "prisma": "7.8.0",
+    "tailwindcss": "4.2.4",
+    "typescript": "5.9.3"
+  }
+}

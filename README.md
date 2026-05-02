@@ -6,6 +6,7 @@ Start with these documents before implementation:
 
 - [Project Overview](docs/project-overview.md)
 - [Implementation Requirements](docs/implementation-requirements.md)
+- [Service Credentials Setup](docs/service-credentials-setup.md)
 - [Service Rules](docs/rules)
 
 ## Phase 1 Foundation
@@ -41,3 +42,7 @@ Dashboard workflow persistence is implemented through Clerk-scoped API routes:
 - `DELETE /api/workflows/:workflowId`
 
 Every workflow query is scoped by the authenticated Clerk user id. New workflows are created with locked `Request-Inputs` and `Response` nodes already present in the graph.
+
+## Phase 3 And 4 Builder Shell
+
+The workflow page now renders a Galaxy-style builder shell with left sidebar, top run/history controls, bottom node picker, right history panel, React Flow canvas, dot grid, MiniMap, custom typed nodes, animated edges, type-safe connection validation, cycle prevention, protected starter nodes, delete/backspace removal for editable nodes, and undo/redo for graph operations.

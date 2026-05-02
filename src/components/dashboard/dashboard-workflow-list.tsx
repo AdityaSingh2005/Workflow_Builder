@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { cn } from "@/lib/utils/cn";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import type { WorkflowDetail, WorkflowSummary } from "@/types/workflow";
 
 type DashboardWorkflowListProps = {
@@ -162,56 +164,55 @@ export function DashboardWorkflowList({
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-[#737782]">Workflows</p>
-          <h1 className="text-2xl font-semibold tracking-normal text-[#191b23]">
+          <p className="text-sm font-medium text-text-secondary">Workflows</p>
+          <h1 className="text-2xl font-semibold tracking-normal text-text-primary">
             Dashboard
           </h1>
         </div>
-        <button
-          className="inline-flex items-center gap-2 rounded-md bg-[#635bff] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#554df0] disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
           disabled={isCreating}
           onClick={createNewWorkflow}
-          type="button"
+          variant="primary"
         >
           <Plus aria-hidden="true" className="size-4" />
           {isCreating ? "Creating" : "Create New Workflow"}
-        </button>
+        </Button>
       </div>
 
       {errorMessage ? (
-        <div className="rounded-lg border border-[#f1c5c5] bg-[#fff7f7] px-4 py-3 text-sm text-[#9c2f2f]">
+        <div className="rounded-panel border border-[#f1c5c5] bg-[#fff7f7] px-4 py-3 text-sm text-danger">
           {errorMessage}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-[#e7e8ec] bg-white shadow-sm">
+      <Panel className="overflow-hidden shadow-sm">
         {workflows.length === 0 ? (
           <div className="grid min-h-72 place-items-center px-6 py-12 text-center">
             <div className="max-w-sm">
-              <div className="mx-auto grid size-10 place-items-center rounded-lg border border-[#e7e8ec] bg-[#fbfbfc]">
-                <Plus aria-hidden="true" className="size-5 text-[#635bff]" />
+              <div className="mx-auto grid size-10 place-items-center rounded-panel border border-border-primary bg-layer-2">
+                <Plus aria-hidden="true" className="size-5 text-primary" />
               </div>
-              <h2 className="mt-4 text-base font-semibold text-[#191b23]">
+              <h2 className="mt-4 text-base font-semibold text-text-primary">
                 No workflows yet
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[#737782]">
+              <p className="mt-2 text-sm leading-6 text-text-secondary">
                 Create your first workflow to open a blank canvas with
                 Request-Inputs and Response already placed.
               </p>
-              <button
-                className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#635bff] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#554df0] disabled:cursor-not-allowed disabled:opacity-60"
+              <Button
+                className="mt-5"
                 disabled={isCreating}
                 onClick={createNewWorkflow}
-                type="button"
+                variant="primary"
               >
                 <Plus aria-hidden="true" className="size-4" />
                 Create New Workflow
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-[#eef0f4]">
-            <div className="grid grid-cols-[minmax(0,1fr)_160px_120px_190px] gap-4 bg-[#fbfbfc] px-5 py-3 text-xs font-semibold uppercase tracking-normal text-[#737782]">
+          <div className="divide-y divide-border-secondary">
+            <div className="grid grid-cols-[minmax(0,1fr)_160px_120px_190px] gap-4 bg-layer-2 px-5 py-3 text-xs font-semibold uppercase tracking-normal text-text-secondary">
               <span>Name</span>
               <span>Last Edited</span>
               <span>Status</span>
@@ -223,64 +224,59 @@ export function DashboardWorkflowList({
 
               return (
                 <div
-                  className="grid grid-cols-[minmax(0,1fr)_160px_120px_190px] items-center gap-4 px-5 py-4 transition hover:bg-[#fbfbfc]"
+                  className="grid grid-cols-[minmax(0,1fr)_160px_120px_190px] items-center gap-4 px-5 py-4 transition hover:bg-layer-2"
                   key={workflow.id}
                 >
                   <div className="min-w-0">
                     <Link
-                      className="block truncate text-sm font-semibold text-[#191b23] hover:text-[#635bff]"
+                      className="block truncate text-sm font-semibold text-text-primary hover:text-primary"
                       href={`/workflows/${workflow.id}`}
                     >
                       {workflow.name}
                     </Link>
-                    <p className="mt-1 truncate text-xs text-[#9b9faa]">
+                    <p className="mt-1 truncate text-xs text-text-tertiary">
                       {workflow.id}
                     </p>
                   </div>
 
-                  <span className="text-sm text-[#737782]">
+                  <span className="text-sm text-text-secondary">
                     {formatLastEdited(workflow.updatedAt)}
                   </span>
 
-                  <span
-                    className={cn(
-                      "w-fit rounded-full px-2.5 py-1 text-xs font-semibold",
-                      workflow.status === "running"
-                        ? "bg-[#fff3d6] text-[#9a6300]"
-                        : "bg-[#eefaf2] text-[#2b7a46]",
-                    )}
+                  <Badge
+                    tone={workflow.status === "running" ? "warning" : "success"}
                   >
                     {workflow.status === "running" ? "Running" : "Idle"}
-                  </span>
+                  </Badge>
 
                   <div className="flex items-center justify-end gap-2">
                     <Link
-                      className="rounded-md border border-[#e7e8ec] px-3 py-1.5 text-sm font-medium text-[#343741] transition hover:bg-[#f5f6f8]"
+                      className="rounded-control border border-border-primary px-3 py-1.5 text-sm font-medium text-text-primary transition hover:bg-layer-2"
                       href={`/workflows/${workflow.id}`}
                     >
                       Open
                     </Link>
-                    <button
+                    <Button
                       aria-label={`Rename ${workflow.name}`}
-                      className="grid size-8 place-items-center rounded-md border border-[#e7e8ec] text-[#565b66] transition hover:bg-[#f5f6f8] disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={isPending}
                       onClick={() => void renameExistingWorkflow(workflow)}
-                      type="button"
+                      size="icon"
+                      variant="secondary"
                     >
                       <Pencil aria-hidden="true" className="size-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       aria-label={`Delete ${workflow.name}`}
-                      className="grid size-8 place-items-center rounded-md border border-[#e7e8ec] text-[#b33a3a] transition hover:bg-[#fff7f7] disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={isPending}
                       onClick={() => void deleteExistingWorkflow(workflow)}
-                      type="button"
+                      size="icon"
+                      variant="danger"
                     >
                       <Trash2 aria-hidden="true" className="size-4" />
-                    </button>
+                    </Button>
                     <MoreHorizontal
                       aria-hidden="true"
-                      className="size-4 text-[#b3b7c0]"
+                      className="size-4 text-text-tertiary"
                     />
                   </div>
                 </div>
@@ -288,7 +284,7 @@ export function DashboardWorkflowList({
             })}
           </div>
         )}
-      </div>
+      </Panel>
     </section>
   );
 }

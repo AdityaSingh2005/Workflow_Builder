@@ -1,13 +1,26 @@
+@config "../../tailwind.config.ts";
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 :root {
-  --background: #f7f7f8;
-  --foreground: #191b23;
-  --panel: #ffffff;
-  --panel-border: #e7e8ec;
-  --muted: #737782;
-  --primary: #635bff;
-  --primary-foreground: #ffffff;
+  --color-layer-0: #f7f7f8;
+  --color-layer-1: #ffffff;
+  --color-layer-2: #f5f6f8;
+  --color-layer-3: #eef0f4;
+  --color-primary: #635bff;
+  --color-primary-hover: #554df0;
+  --color-primary-soft: #eeecff;
+  --color-border-primary: #e7e8ec;
+  --color-border-secondary: #eef0f4;
+  --color-text-primary: #191b23;
+  --color-text-secondary: #646976;
+  --color-text-tertiary: #a1a6b2;
+  --color-success: #248348;
+  --color-warning: #9a6300;
+  --color-danger: #b33a3a;
+  --color-handle-text: #ff9d1f;
+  --color-handle-image: #2f76ff;
+  --color-handle-any: #39bf64;
 }
 
 * {
@@ -21,8 +34,8 @@ body {
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-layer-0);
+  color: var(--color-text-primary);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -38,6 +51,35 @@ button {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__minimap {
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-layer-1);
+  box-shadow: 0 10px 24px rgba(24, 27, 35, 0.1);
+}
+
+.nextflow-running-node {
+  animation: nextflow-node-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes nextflow-node-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 18px 38px rgba(24, 27, 35, 0.12),
+      0 0 0 0 rgba(99, 91, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 18px 38px rgba(24, 27, 35, 0.16),
+      0 0 0 8px rgba(99, 91, 255, 0.12);
+  }
+}

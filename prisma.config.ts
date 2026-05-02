@@ -1,6 +1,8 @@
-import "dotenv/config";
-
+import { config as loadEnvFile } from "dotenv";
 import { defineConfig } from "prisma/config";
+
+loadEnvFile({ path: ".env" });
+loadEnvFile({ path: ".env.local", override: true });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -14,4 +16,3 @@ export default defineConfig({
       "postgresql://nextflow:nextflow@localhost:5432/nextflow",
   },
 });
-

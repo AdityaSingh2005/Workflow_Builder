@@ -8,10 +8,10 @@ export function AppShell({
   children: ReactNode;
 }>) {
   return (
-    <div className="min-h-screen bg-[#f7f7f8]">
-      <header className="flex h-14 items-center justify-between border-b border-[#e7e8ec] bg-white px-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#191b23]">
-          <span className="grid size-8 place-items-center rounded-md border border-[#e7e8ec] bg-white">
+    <div className="min-h-screen bg-layer-0">
+      <header className="flex h-14 items-center justify-between border-b border-border-primary bg-layer-1 px-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+          <span className="grid size-8 place-items-center rounded-control border border-border-primary bg-layer-1">
             <Workflow aria-hidden="true" className="size-4" />
           </span>
           NextFlow
@@ -22,4 +22,3 @@ export function AppShell({
     </div>
   );
 }
-

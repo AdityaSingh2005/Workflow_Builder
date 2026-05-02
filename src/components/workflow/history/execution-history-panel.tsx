@@ -1,20 +1,69 @@
 "use client";
 
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import type { WorkflowRun } from "@/types/workflow";
 
 type ExecutionHistoryPanelProps = {
   open: boolean;
+  workflowId: string;
+  refreshKey: number;
   onClose: () => void;
 };
 
+function formatRunDetailValue(value: unknown) {
+  if (value === undefined || value === null) {
+    return "n/a";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value).slice(0, 220);
+}
+
 export function ExecutionHistoryPanel({
   open,
+  workflowId,
+  refreshKey,
   onClose,
 }: ExecutionHistoryPanelProps) {
+  const [runs, setRuns] = useState<WorkflowRun[]>([]);
+  const [expandedRunId, setExpandedRunId] = useState<string>();
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRuns() {
+      const response = await fetch(`/api/workflows/${workflowId}/runs`);
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as { runs: WorkflowRun[] };
+
+      if (!cancelled) {
+        setRuns(payload.runs);
+      }
+    }
+
+    void loadRuns();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, refreshKey, workflowId]);
+
   if (!open) {
     return null;
   }
@@ -54,12 +103,107 @@ export function ExecutionHistoryPanel({
         <Badge>All</Badge>
       </div>
 
-      <div className="px-4">
-        <Panel className="grid min-h-24 place-items-center px-4 py-6 text-center text-sm text-text-tertiary shadow-none">
-          No runs for this filter yet.
-        </Panel>
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+        {runs.length === 0 ? (
+          <Panel className="grid min-h-24 place-items-center px-4 py-6 text-center text-sm text-text-tertiary shadow-none">
+            No runs for this filter yet.
+          </Panel>
+        ) : (
+          <div className="space-y-2">
+            {runs.map((run, index) => {
+              const expanded = expandedRunId === run.id;
+
+              return (
+                <Panel className="overflow-hidden shadow-none" key={run.id}>
+                  <button
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left"
+                    onClick={() =>
+                      setExpandedRunId(expanded ? undefined : run.id)
+                    }
+                    type="button"
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={`size-4 text-text-tertiary transition ${
+                        expanded ? "rotate-180" : ""
+                      }`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-text-primary">
+                        Run #{runs.length - index}
+                      </span>
+                      <span className="block truncate text-xs text-text-tertiary">
+                        {new Date(run.startedAt).toLocaleString()} · {run.scope}
+                      </span>
+                    </span>
+                    <Badge
+                      tone={
+                        run.status === "success"
+                          ? "success"
+                          : run.status === "partial"
+                            ? "warning"
+                            : "danger"
+                      }
+                    >
+                      {run.status}
+                    </Badge>
+                  </button>
+
+                  {expanded ? (
+                    <div className="border-t border-border-secondary px-3 py-2">
+                      <div className="mb-2 text-xs text-text-tertiary">
+                        Duration:{" "}
+                        {run.durationMs
+                          ? `${(run.durationMs / 1000).toFixed(1)}s`
+                          : "n/a"}
+                      </div>
+                      <div className="space-y-2">
+                        {run.nodeRuns.map((nodeRun) => (
+                          <div
+                            className="rounded-control bg-layer-2 px-2 py-2 text-xs"
+                            key={`${run.id}-${nodeRun.nodeId}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate font-semibold text-text-primary">
+                                {nodeRun.nodeLabel}
+                              </span>
+                              <Badge
+                                tone={
+                                  nodeRun.status === "success"
+                                    ? "success"
+                                    : nodeRun.status === "skipped"
+                                      ? "warning"
+                                      : "danger"
+                                }
+                              >
+                                {nodeRun.status}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-text-tertiary">
+                              {nodeRun.durationMs
+                                ? `${(nodeRun.durationMs / 1000).toFixed(1)}s`
+                                : "n/a"}
+                              {nodeRun.error ? ` · ${nodeRun.error}` : ""}
+                            </div>
+                            <div className="mt-2 space-y-1 text-[11px] text-text-tertiary">
+                              <div className="truncate">
+                                Inputs: {formatRunDetailValue(nodeRun.inputs)}
+                              </div>
+                              <div className="truncate">
+                                Output: {formatRunDetailValue(nodeRun.output)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </Panel>
+              );
+            })}
+          </div>
+        )}
       </div>
     </aside>
   );
 }
-

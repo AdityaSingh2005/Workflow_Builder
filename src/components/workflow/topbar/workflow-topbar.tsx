@@ -9,11 +9,19 @@ import { useWorkflowBuilderStore } from "@/store/workflow-builder-store";
 
 type WorkflowTopbarProps = {
   workflowName: string;
+  selectedNodeCount: number;
+  running: boolean;
+  onRunFull: () => void;
+  onRunSelected: () => void;
   onToggleHistory: () => void;
 };
 
 export function WorkflowTopbar({
   workflowName,
+  selectedNodeCount,
+  running,
+  onRunFull,
+  onRunSelected,
   onToggleHistory,
 }: WorkflowTopbarProps) {
   const undo = useWorkflowBuilderStore((state) => state.undo);
@@ -50,7 +58,13 @@ export function WorkflowTopbar({
         <Button disabled={!canRedo} onClick={redo} size="icon" variant="secondary">
           <Redo2 aria-hidden="true" className="size-4" />
         </Button>
-        <Button size="iconLg" variant="primary">
+        {selectedNodeCount > 0 ? (
+          <Button disabled={running} onClick={onRunSelected} variant="secondary">
+            <Play aria-hidden="true" className="size-4" />
+            Selected
+          </Button>
+        ) : null}
+        <Button disabled={running} onClick={onRunFull} size="iconLg" variant="primary">
           <Play aria-hidden="true" className="size-5 fill-white" />
         </Button>
         <Button onClick={onToggleHistory} size="iconLg" variant="secondary">

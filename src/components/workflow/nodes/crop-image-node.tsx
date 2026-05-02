@@ -27,6 +27,9 @@ export function CropImageNode({
   const running = useWorkflowBuilderStore((state) =>
     state.runningNodeIds.includes(id),
   );
+  const updateCropImageNode = useWorkflowBuilderStore(
+    (state) => state.updateCropImageNode,
+  );
   const inputImageConnected = connectedHandles.has("inputImage");
 
   return (
@@ -41,9 +44,13 @@ export function CropImageNode({
         <NodeRow connected={inputImageConnected} label="Input Image" required>
           <Input
             disabled={inputImageConnected}
+            onChange={(event) =>
+              updateCropImageNode(id, {
+                inputImageUrl: event.target.value,
+              })
+            }
             placeholder="Paste image URL..."
             value={data.inputImageUrl ?? ""}
-            readOnly
           />
           <TypedHandle
             dataType="image"
@@ -54,17 +61,39 @@ export function CropImageNode({
         </NodeRow>
 
         <div className="grid grid-cols-2 gap-2 px-3 py-2">
-          {[
-            ["X Position", data.xPercent],
-            ["Y Position", data.yPercent],
-            ["Width", data.widthPercent],
-            ["Height", data.heightPercent],
-          ].map(([label, value]) => (
+          {(
+            [
+              ["X Position", "xPercent", data.xPercent],
+              ["Y Position", "yPercent", data.yPercent],
+              ["Width", "widthPercent", data.widthPercent],
+              ["Height", "heightPercent", data.heightPercent],
+            ] as const
+          ).map(([label, key, value]) => (
             <label className="flex flex-col gap-1" key={label}>
               <span className="text-[10px] font-medium text-text-tertiary">
                 {label} %
               </span>
-              <Input readOnly type="number" value={value} />
+              <Input
+                disabled={connectedHandles.has(key)}
+                max={100}
+                min={0}
+                onChange={(event) =>
+                  updateCropImageNode(id, {
+                    [key]: Math.max(
+                      0,
+                      Math.min(100, Number(event.target.value)),
+                    ),
+                  })
+                }
+                type="number"
+                value={value}
+              />
+              <TypedHandle
+                dataType="text"
+                id={key}
+                position={Position.Left}
+                type="target"
+              />
             </label>
           ))}
         </div>

@@ -59,6 +59,7 @@ export type RequestInputField = {
   name: string;
   type: RequestInputFieldType;
   value: string;
+  previewUrl?: string;
 };
 
 export type RequestInputsNodeData = {
@@ -163,4 +164,14 @@ export type WorkflowRun = {
   finishedAt?: string;
   durationMs?: number;
   nodeRuns: NodeExecutionResult[];
+};
+
+export type RunWorkflowRequest = {
+  scope: WorkflowRunScope;
+  nodeIds?: WorkflowNodeId[];
+};
+
+export type RunWorkflowResponse = {
+  run: WorkflowRun;
+  workflow: WorkflowDetail;
 };

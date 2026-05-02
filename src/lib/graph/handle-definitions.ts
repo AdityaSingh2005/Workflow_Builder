@@ -19,6 +19,22 @@ const targetHandleRules: Partial<
       dataType: "image",
       allowMultiple: false,
     },
+    xPercent: {
+      dataType: "text",
+      allowMultiple: false,
+    },
+    yPercent: {
+      dataType: "text",
+      allowMultiple: false,
+    },
+    widthPercent: {
+      dataType: "text",
+      allowMultiple: false,
+    },
+    heightPercent: {
+      dataType: "text",
+      allowMultiple: false,
+    },
   },
   gemini: {
     prompt: {

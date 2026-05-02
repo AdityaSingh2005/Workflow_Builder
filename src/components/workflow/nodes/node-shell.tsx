@@ -55,7 +55,21 @@ export function NodeShell({
         </div>
         <div className="flex items-center gap-1">
           {!locked ? (
-            <Button className="h-6 px-2 text-[10px]" size="sm" variant="ghost">
+            <Button
+              className="h-6 px-2 text-[10px]"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent("nextflow:run-nodes", {
+                    detail: {
+                      scope: "single",
+                      nodeIds: [nodeId],
+                    },
+                  }),
+                )
+              }
+              size="sm"
+              variant="ghost"
+            >
               <Play aria-hidden="true" className="size-3 text-success" />
               Run
             </Button>

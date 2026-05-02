@@ -24,6 +24,9 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
   const running = useWorkflowBuilderStore((state) =>
     state.runningNodeIds.includes(id),
   );
+  const updateGeminiNode = useWorkflowBuilderStore(
+    (state) => state.updateGeminiNode,
+  );
   const promptConnected = connectedHandles.has("prompt");
   const systemPromptConnected = connectedHandles.has("systemPrompt");
 
@@ -39,10 +42,16 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
       <div className="border-b border-border-secondary px-3 py-2">
         <select
           className="h-8 w-full rounded-control border border-border-primary bg-layer-2 px-2 text-xs font-semibold text-text-primary outline-none"
+          onChange={(event) =>
+            updateGeminiNode(id, {
+              modelLabel: event.target.value,
+            })
+          }
           value={data.modelLabel}
-          disabled
         >
           <option>Gemini 3.1 Pro</option>
+          <option>Gemini 2.5 Pro</option>
+          <option>Gemini 1.5 Pro</option>
         </select>
       </div>
 
@@ -50,8 +59,12 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
         <NodeRow connected={promptConnected} label="Prompt" required>
           <Textarea
             disabled={promptConnected}
+            onChange={(event) =>
+              updateGeminiNode(id, {
+                prompt: event.target.value,
+              })
+            }
             placeholder="Enter prompt..."
-            readOnly
             value={data.prompt ?? ""}
           />
           <TypedHandle
@@ -65,8 +78,12 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
         <NodeRow connected={systemPromptConnected} label="System Prompt">
           <Input
             disabled={systemPromptConnected}
+            onChange={(event) =>
+              updateGeminiNode(id, {
+                systemPrompt: event.target.value,
+              })
+            }
             placeholder="Optional instructions..."
-            readOnly
             value={data.systemPrompt ?? ""}
           />
           <TypedHandle
@@ -79,20 +96,71 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
 
         {(
           [
-            { label: "Image (Vision)", idValue: "image", dataType: "image" },
-            { label: "Video", idValue: "video", dataType: "video" },
-            { label: "Audio", idValue: "audio", dataType: "audio" },
-            { label: "File", idValue: "file", dataType: "file" },
+            {
+              label: "Image (Vision)",
+              idValue: "image",
+              dataType: "image",
+              value: data.imageUrls.join(", "),
+              update: (value: string) =>
+                updateGeminiNode(id, {
+                  imageUrls: value
+                    .split(",")
+                    .map((url) => url.trim())
+                    .filter(Boolean),
+                }),
+            },
+            {
+              label: "Video",
+              idValue: "video",
+              dataType: "video",
+              value: data.videoUrls.join(", "),
+              update: (value: string) =>
+                updateGeminiNode(id, {
+                  videoUrls: value
+                    .split(",")
+                    .map((url) => url.trim())
+                    .filter(Boolean),
+                }),
+            },
+            {
+              label: "Audio",
+              idValue: "audio",
+              dataType: "audio",
+              value: data.audioUrls.join(", "),
+              update: (value: string) =>
+                updateGeminiNode(id, {
+                  audioUrls: value
+                    .split(",")
+                    .map((url) => url.trim())
+                    .filter(Boolean),
+                }),
+            },
+            {
+              label: "File",
+              idValue: "file",
+              dataType: "file",
+              value: data.fileUrls.join(", "),
+              update: (value: string) =>
+                updateGeminiNode(id, {
+                  fileUrls: value
+                    .split(",")
+                    .map((url) => url.trim())
+                    .filter(Boolean),
+                }),
+            },
           ] as const
-        ).map(({ label, idValue, dataType }) => (
+        ).map(({ label, idValue, dataType, value, update }) => (
           <NodeRow
             connected={connectedHandles.has(idValue)}
             key={idValue}
             label={label}
           >
-            <div className="rounded-control bg-layer-2 px-2 py-2 text-[11px] text-text-tertiary">
-              {connectedHandles.has(idValue) ? "Connected" : "No input"}
-            </div>
+            <Input
+              disabled={connectedHandles.has(idValue)}
+              onChange={(event) => update(event.target.value)}
+              placeholder="Paste URL, comma-separate multiples..."
+              value={value}
+            />
             <TypedHandle
               dataType={dataType}
               id={idValue}
@@ -104,11 +172,21 @@ export function GeminiNode({ id, data, selected }: NodeProps<GeminiFlowNode>) {
 
         <button
           className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-text-tertiary"
+          onClick={() =>
+            updateGeminiNode(id, {
+              settingsCollapsed: !data.settingsCollapsed,
+            })
+          }
           type="button"
         >
           <ChevronRight aria-hidden="true" className="size-3" />
           Settings
         </button>
+        {!data.settingsCollapsed ? (
+          <div className="px-3 py-2 text-[11px] text-text-tertiary">
+            Default temperature and safety settings
+          </div>
+        ) : null}
 
         <NodeRow label="Response">
           <div className="grid min-h-20 place-items-center rounded-control bg-layer-2 px-3 py-3 text-center text-[11px] text-text-tertiary">

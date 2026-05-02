@@ -19,7 +19,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "trigger:dev": "npx trigger.dev@4.4.5 dev"
+    "trigger:dev": "npx trigger.dev@4.4.5 dev --env-file .env.local"
   },
   "dependencies": {
     "@clerk/nextjs": "7.3.0",

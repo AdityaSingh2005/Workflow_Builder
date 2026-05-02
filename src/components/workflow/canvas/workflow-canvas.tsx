@@ -25,7 +25,12 @@ import { WorkflowBottomToolbar } from "@/components/workflow/toolbar/workflow-bo
 import { WorkflowTopbar } from "@/components/workflow/topbar/workflow-topbar";
 import { cn } from "@/lib/utils/cn";
 import { useWorkflowBuilderStore } from "@/store/workflow-builder-store";
-import type { WorkflowDetail, WorkflowGraph } from "@/types/workflow";
+import type {
+  RunWorkflowRequest,
+  RunWorkflowResponse,
+  WorkflowDetail,
+  WorkflowGraph,
+} from "@/types/workflow";
 
 const nodeTypes = {
   requestInputs: RequestInputsNode,
@@ -58,6 +63,8 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
   const reactFlow = useReactFlow();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [runInProgress, setRunInProgress] = useState(false);
   const hasHydratedRef = useRef(false);
   const lastSerializedGraphRef = useRef<string | undefined>(undefined);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -90,8 +97,19 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
     (state) => state.captureGraphSnapshot,
   );
   const setSelection = useWorkflowBuilderStore((state) => state.setSelection);
+  const selectedNodeIds = useWorkflowBuilderStore((state) => state.selectedNodeIds);
   const serializeWorkflowGraph = useWorkflowBuilderStore(
     (state) => state.serializeWorkflowGraph,
+  );
+  const setRunningNodeIds = useWorkflowBuilderStore(
+    (state) => state.setRunningNodeIds,
+  );
+  const setLatestRunError = useWorkflowBuilderStore(
+    (state) => state.setLatestRunError,
+  );
+  const latestRunError = useWorkflowBuilderStore((state) => state.latestRunError);
+  const updateWorkflowGraphFromServer = useWorkflowBuilderStore(
+    (state) => state.updateWorkflowGraphFromServer,
   );
 
   useEffect(() => {
@@ -129,6 +147,68 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteSelectedGraphItems]);
 
+  const runWorkflow = useCallback(
+    async (request: RunWorkflowRequest) => {
+      setRunInProgress(true);
+      setLatestRunError(undefined);
+      const nodeIdsForGlow =
+        request.scope === "full"
+          ? nodes
+              .filter((node) => node.type === "cropImage" || node.type === "gemini")
+              .map((node) => node.id)
+          : (request.nodeIds ?? []);
+      setRunningNodeIds(nodeIdsForGlow);
+
+      try {
+        const response = await fetch(`/api/workflows/${workflow.id}/runs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+          throw new Error("Workflow run failed.");
+        }
+
+        const payload = (await response.json()) as RunWorkflowResponse;
+        updateWorkflowGraphFromServer(payload.workflow.graph);
+        lastSerializedGraphRef.current = JSON.stringify(
+          normalizeWorkflowGraphForAutosave(payload.workflow.graph),
+        );
+        setHistoryRefreshKey((current) => current + 1);
+        setHistoryOpen(true);
+      } catch (error) {
+        setLatestRunError(
+          error instanceof Error ? error.message : "Workflow run failed.",
+        );
+      } finally {
+        setRunningNodeIds([]);
+        setRunInProgress(false);
+      }
+    },
+    [
+      nodes,
+      setLatestRunError,
+      setRunningNodeIds,
+      updateWorkflowGraphFromServer,
+      workflow.id,
+    ],
+  );
+
+  useEffect(() => {
+    function handleRunNodes(event: Event) {
+      const customEvent = event as CustomEvent<RunWorkflowRequest>;
+      void runWorkflow(customEvent.detail);
+    }
+
+    window.addEventListener("nextflow:run-nodes", handleRunNodes);
+
+    return () =>
+      window.removeEventListener("nextflow:run-nodes", handleRunNodes);
+  }, [runWorkflow]);
+
   useEffect(() => {
     if (!hasHydratedRef.current || nodes.length === 0) {
       return;
@@ -163,6 +243,22 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
       connectWorkflowHandles(connection);
     },
     [connectWorkflowHandles],
+  );
+
+  const onSelectionChange = useCallback(
+    ({
+      nodes: selectedNodes,
+      edges: selectedEdges,
+    }: {
+      nodes: typeof nodes;
+      edges: typeof edges;
+    }) => {
+      setSelection({
+        nodeIds: selectedNodes.map((node) => node.id),
+        edgeIds: selectedEdges.map((edge) => edge.id),
+      });
+    },
+    [setSelection],
   );
 
   const defaultEdgeOptions = useMemo(
@@ -227,12 +323,7 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
           onEdgesChange={applyWorkflowEdgeChanges}
           onNodeDragStart={captureGraphSnapshot}
           onNodesChange={applyWorkflowNodeChanges}
-          onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) =>
-            setSelection({
-              nodeIds: selectedNodes.map((node) => node.id),
-              edgeIds: selectedEdges.map((edge) => edge.id),
-            })
-          }
+          onSelectionChange={onSelectionChange}
           panOnScroll
           selectionOnDrag
         >
@@ -259,6 +350,15 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
 
         <WorkflowTopbar
           onToggleHistory={() => setHistoryOpen((current) => !current)}
+          onRunFull={() => void runWorkflow({ scope: "full" })}
+          onRunSelected={() =>
+            void runWorkflow({
+              scope: selectedNodeIds.length === 1 ? "single" : "partial",
+              nodeIds: selectedNodeIds,
+            })
+          }
+          running={runInProgress}
+          selectedNodeCount={selectedNodeIds.length}
           workflowName={workflow.name}
         />
         <WorkflowBottomToolbar
@@ -270,9 +370,16 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
           onAddGemini={addGeminiFromPicker}
           open={pickerOpen}
         />
+        {latestRunError ? (
+          <div className="absolute bottom-20 left-6 z-30 max-w-sm rounded-panel border border-[#f1c5c5] bg-[#fff7f7] px-4 py-3 text-sm text-danger shadow-floating">
+            {latestRunError}
+          </div>
+        ) : null}
         <ExecutionHistoryPanel
+          refreshKey={historyRefreshKey}
           onClose={() => setHistoryOpen(false)}
           open={historyOpen}
+          workflowId={workflow.id}
         />
       </main>
     </div>

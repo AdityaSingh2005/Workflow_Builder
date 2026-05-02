@@ -23,7 +23,10 @@ import {
 import type {
   CropImageNodeData,
   GeminiNodeData,
+  RequestInputFieldType,
+  RequestInputsNodeData,
   WorkflowGraph,
+  WorkflowNodeData,
 } from "@/types/workflow";
 
 type WorkflowSnapshot = {
@@ -39,6 +42,7 @@ type WorkflowBuilderState = {
   selectedNodeIds: string[];
   selectedEdgeIds: string[];
   runningNodeIds: string[];
+  latestRunError?: string;
   undoStack: WorkflowSnapshot[];
   redoStack: WorkflowSnapshot[];
   hydrateWorkflow: (input: {
@@ -57,6 +61,20 @@ type WorkflowBuilderState = {
   deleteSelectedGraphItems: () => void;
   setSelection: (input: { nodeIds: string[]; edgeIds: string[] }) => void;
   setNodeRunning: (nodeId: string, running: boolean) => void;
+  setRunningNodeIds: (nodeIds: string[]) => void;
+  setLatestRunError: (message?: string) => void;
+  addRequestInputField: (nodeId: string, fieldType: RequestInputFieldType) => void;
+  updateRequestInputField: (
+    nodeId: string,
+    fieldId: string,
+    updates: { name?: string; value?: string; previewUrl?: string },
+  ) => void;
+  updateCropImageNode: (
+    nodeId: string,
+    updates: Partial<CropImageNodeData>,
+  ) => void;
+  updateGeminiNode: (nodeId: string, updates: Partial<GeminiNodeData>) => void;
+  updateWorkflowGraphFromServer: (graph: WorkflowGraph) => void;
   undo: () => void;
   redo: () => void;
   serializeWorkflowGraph: () => WorkflowGraph;
@@ -78,6 +96,94 @@ function pushUndoSnapshot(state: WorkflowBuilderState) {
 
 function createNodeId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function areStringArraysEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function areWorkflowFlowNodesEqual(
+  left: WorkflowFlowNode[],
+  right: WorkflowFlowNode[],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftNode, index) => {
+    const rightNode = right[index];
+
+    return (
+      rightNode &&
+      leftNode.id === rightNode.id &&
+      leftNode.type === rightNode.type &&
+      leftNode.position.x === rightNode.position.x &&
+      leftNode.position.y === rightNode.position.y &&
+      leftNode.selected === rightNode.selected &&
+      leftNode.dragging === rightNode.dragging &&
+      leftNode.resizing === rightNode.resizing &&
+      leftNode.width === rightNode.width &&
+      leftNode.height === rightNode.height &&
+      leftNode.measured?.width === rightNode.measured?.width &&
+      leftNode.measured?.height === rightNode.measured?.height &&
+      leftNode.data === rightNode.data
+    );
+  });
+}
+
+function areWorkflowFlowEdgesEqual(
+  left: WorkflowFlowEdge[],
+  right: WorkflowFlowEdge[],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftEdge, index) => {
+    const rightEdge = right[index];
+
+    return (
+      rightEdge &&
+      leftEdge.id === rightEdge.id &&
+      leftEdge.source === rightEdge.source &&
+      leftEdge.target === rightEdge.target &&
+      leftEdge.sourceHandle === rightEdge.sourceHandle &&
+      leftEdge.targetHandle === rightEdge.targetHandle &&
+      leftEdge.selected === rightEdge.selected &&
+      leftEdge.data === rightEdge.data
+    );
+  });
+}
+
+function updateNodeData<TData extends WorkflowNodeData>(
+  nodes: WorkflowFlowNode[],
+  nodeId: string,
+  updater: (data: TData) => TData,
+) {
+  return nodes.map((node) =>
+    node.id === nodeId
+      ? {
+          ...node,
+          data: updater(node.data as TData),
+        }
+      : node,
+  );
+}
+
+function createRequestInputFieldName(
+  existingFields: RequestInputsNodeData["fields"],
+  fieldType: RequestInputFieldType,
+) {
+  const baseName = fieldType;
+  const matchingCount = existingFields.filter((field) =>
+    field.name.startsWith(baseName),
+  ).length;
+
+  return matchingCount === 0 ? baseName : `${baseName}_${matchingCount + 1}`;
 }
 
 function createCropImageNode(position: { x: number; y: number }) {
@@ -142,19 +248,43 @@ export const useWorkflowBuilderStore = create<WorkflowBuilderState>(
       });
     },
     applyWorkflowNodeChanges: (changes) => {
-      set((state) => ({
-        nodes: applyNodeChanges(changes, state.nodes),
-      }));
+      if (changes.length === 0) {
+        return;
+      }
+
+      set((state) => {
+        const nextNodes = applyNodeChanges(changes, state.nodes);
+
+        if (areWorkflowFlowNodesEqual(state.nodes, nextNodes)) {
+          return state;
+        }
+
+        return {
+          nodes: nextNodes,
+        };
+      });
     },
     applyWorkflowEdgeChanges: (changes) => {
+      if (changes.length === 0) {
+        return;
+      }
+
       const shouldCaptureUndo = changes.some(
         (change) => change.type === "remove",
       );
 
-      set((state) => ({
-        ...(shouldCaptureUndo ? pushUndoSnapshot(state) : {}),
-        edges: applyEdgeChanges(changes, state.edges),
-      }));
+      set((state) => {
+        const nextEdges = applyEdgeChanges(changes, state.edges);
+
+        if (areWorkflowFlowEdgesEqual(state.edges, nextEdges)) {
+          return state;
+        }
+
+        return {
+          ...(shouldCaptureUndo ? pushUndoSnapshot(state) : {}),
+          edges: nextEdges,
+        };
+      });
     },
     addCropImageNode: (position) => {
       set((state) => ({
@@ -275,9 +405,18 @@ export const useWorkflowBuilderStore = create<WorkflowBuilderState>(
       });
     },
     setSelection: ({ nodeIds, edgeIds }) => {
-      set({
-        selectedNodeIds: nodeIds,
-        selectedEdgeIds: edgeIds,
+      set((state) => {
+        if (
+          areStringArraysEqual(state.selectedNodeIds, nodeIds) &&
+          areStringArraysEqual(state.selectedEdgeIds, edgeIds)
+        ) {
+          return state;
+        }
+
+        return {
+          selectedNodeIds: nodeIds,
+          selectedEdgeIds: edgeIds,
+        };
       });
     },
     setNodeRunning: (nodeId, running) => {
@@ -288,6 +427,96 @@ export const useWorkflowBuilderStore = create<WorkflowBuilderState>(
               (runningNodeId) => runningNodeId !== nodeId,
             ),
       }));
+    },
+    setRunningNodeIds: (nodeIds) => {
+      set((state) => {
+        const nextRunningNodeIds = Array.from(new Set(nodeIds));
+
+        if (areStringArraysEqual(state.runningNodeIds, nextRunningNodeIds)) {
+          return state;
+        }
+
+        return {
+          runningNodeIds: nextRunningNodeIds,
+        };
+      });
+    },
+    setLatestRunError: (message) => {
+      set((state) => {
+        if (state.latestRunError === message) {
+          return state;
+        }
+
+        return {
+          latestRunError: message,
+        };
+      });
+    },
+    addRequestInputField: (nodeId, fieldType) => {
+      set((state) => ({
+        ...pushUndoSnapshot(state),
+        nodes: updateNodeData<RequestInputsNodeData>(
+          state.nodes,
+          nodeId,
+          (data) => ({
+            ...data,
+            fields: [
+              ...data.fields,
+              {
+                id: crypto.randomUUID(),
+                name: createRequestInputFieldName(data.fields, fieldType),
+                type: fieldType,
+                value: "",
+              },
+            ],
+          }),
+        ),
+      }));
+    },
+    updateRequestInputField: (nodeId, fieldId, updates) => {
+      set((state) => ({
+        nodes: updateNodeData<RequestInputsNodeData>(
+          state.nodes,
+          nodeId,
+          (data) => ({
+            ...data,
+            fields: data.fields.map((field) =>
+              field.id === fieldId
+                ? {
+                    ...field,
+                    ...updates,
+                  }
+                : field,
+            ),
+          }),
+        ),
+      }));
+    },
+    updateCropImageNode: (nodeId, updates) => {
+      set((state) => ({
+        nodes: updateNodeData<CropImageNodeData>(state.nodes, nodeId, (data) => ({
+          ...data,
+          ...updates,
+        })),
+      }));
+    },
+    updateGeminiNode: (nodeId, updates) => {
+      set((state) => ({
+        nodes: updateNodeData<GeminiNodeData>(state.nodes, nodeId, (data) => ({
+          ...data,
+          ...updates,
+        })),
+      }));
+    },
+    updateWorkflowGraphFromServer: (graph) => {
+      const flow = workflowGraphToFlow(graph);
+
+      set({
+        nodes: flow.nodes,
+        edges: flow.edges,
+        runningNodeIds: [],
+        latestRunError: undefined,
+      });
     },
     undo: () => {
       set((state) => {

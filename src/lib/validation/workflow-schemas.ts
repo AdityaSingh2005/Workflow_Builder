@@ -28,6 +28,7 @@ export const requestInputFieldSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["text_field", "image_field"]),
   value: z.string(),
+  previewUrl: z.string().optional(),
 });
 
 export const requestInputsNodeDataSchema = z.object({

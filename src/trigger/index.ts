@@ -1,2 +1,2 @@
-export const triggerDirectoryReady = true;
-
+export { cropImageTask } from "@/trigger/crop-image";
+export { geminiTask } from "@/trigger/gemini";

@@ -46,3 +46,19 @@ Every workflow query is scoped by the authenticated Clerk user id. New workflows
 ## Phase 3 And 4 Builder Shell
 
 The workflow page now renders a Galaxy-style builder shell with left sidebar, top run/history controls, bottom node picker, right history panel, React Flow canvas, dot grid, MiniMap, custom typed nodes, animated edges, type-safe connection validation, cycle prevention, protected starter nodes, delete/backspace removal for editable nodes, and undo/redo for graph operations.
+
+## Phase 5 And 6 Node Execution
+
+Request-Inputs, Crop Image, Gemini, and Response nodes now expose their configurable fields and typed handles. Transloadit-backed image upload, Trigger.dev Crop Image and Gemini tasks, workflow run scopes, parallel DAG execution, persisted run history, inline node output display, and running-node glow are implemented.
+
+Run Trigger.dev locally in a separate terminal before testing executable nodes:
+
+```bash
+npm run trigger:dev
+```
+
+## Phase 7 And 8 Import, Export, And Sample Workflow
+
+Workflow JSON export and import are wired into the bottom canvas toolbar. Imports are validated through Zod and rejected when the graph schema version is incompatible.
+
+The dashboard includes a `Sample Workflow` action that creates the required marketing workflow with Request-Inputs, two Crop Image nodes, three Gemini 3.1 Pro nodes, the final Response node, and the specified connections.

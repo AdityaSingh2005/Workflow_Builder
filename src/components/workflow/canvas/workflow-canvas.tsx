@@ -64,7 +64,10 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [importInProgress, setImportInProgress] = useState(false);
+  const [exportInProgress, setExportInProgress] = useState(false);
   const [runInProgress, setRunInProgress] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const hasHydratedRef = useRef(false);
   const lastSerializedGraphRef = useRef<string | undefined>(undefined);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -293,6 +296,80 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
     setPickerOpen(false);
   }
 
+  function createExportFilename() {
+    const slug = workflow.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    return `${slug || "workflow"}-nextflow.json`;
+  }
+
+  async function exportWorkflowJson() {
+    setExportInProgress(true);
+    setLatestRunError(undefined);
+
+    try {
+      const response = await fetch(`/api/workflows/${workflow.id}/export`);
+
+      if (!response.ok) {
+        throw new Error("Unable to export workflow JSON.");
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = createExportFilename();
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setLatestRunError(
+        error instanceof Error
+          ? error.message
+          : "Unable to export workflow JSON.",
+      );
+    } finally {
+      setExportInProgress(false);
+    }
+  }
+
+  async function importWorkflowJson(file: File) {
+    setImportInProgress(true);
+    setLatestRunError(undefined);
+
+    try {
+      const payload = JSON.parse(await file.text()) as unknown;
+      const response = await fetch(`/api/workflows/${workflow.id}/import`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Import rejected. Check the workflow JSON format.");
+      }
+
+      const result = (await response.json()) as { workflow: WorkflowDetail };
+      updateWorkflowGraphFromServer(result.workflow.graph);
+      lastSerializedGraphRef.current = JSON.stringify(
+        normalizeWorkflowGraphForAutosave(result.workflow.graph),
+      );
+    } catch (error) {
+      setLatestRunError(
+        error instanceof Error
+          ? error.message
+          : "Import rejected. Check the workflow JSON format.",
+      );
+    } finally {
+      setImportInProgress(false);
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-57px)] min-h-[680px] overflow-hidden bg-layer-0">
       <WorkflowSidebar />
@@ -362,8 +439,27 @@ function WorkflowCanvasInner({ workflow }: WorkflowCanvasProps) {
           workflowName={workflow.name}
         />
         <WorkflowBottomToolbar
+          exporting={exportInProgress}
+          importing={importInProgress}
+          onExportWorkflow={() => void exportWorkflowJson()}
+          onImportWorkflow={() => importInputRef.current?.click()}
           onTogglePicker={() => setPickerOpen((current) => !current)}
           pickerOpen={pickerOpen}
+        />
+        <input
+          ref={importInputRef}
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+
+            event.target.value = "";
+
+            if (file) {
+              void importWorkflowJson(file);
+            }
+          }}
+          type="file"
         />
         <NodePicker
           onAddCropImage={addCropFromPicker}

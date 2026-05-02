@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -50,6 +50,7 @@ export function DashboardWorkflowList({
   const [workflows, setWorkflows] = useState(initialWorkflows);
   const [pendingWorkflowId, setPendingWorkflowId] = useState<string>();
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingSample, setIsCreatingSample] = useState(false);
   const [errorMessage, setErrorMessage] = useState(databaseError);
 
   async function createNewWorkflow() {
@@ -77,6 +78,32 @@ export function DashboardWorkflowList({
       );
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function createSampleMarketingWorkflow() {
+    setIsCreatingSample(true);
+    setErrorMessage(undefined);
+
+    try {
+      const response = await fetch("/api/workflows/sample", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to create sample workflow.");
+      }
+
+      const payload = (await response.json()) as CreateWorkflowResponse;
+      router.push(`/workflows/${payload.workflow.id}`);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to create sample workflow.",
+      );
+    } finally {
+      setIsCreatingSample(false);
     }
   }
 
@@ -169,14 +196,24 @@ export function DashboardWorkflowList({
             Dashboard
           </h1>
         </div>
-        <Button
-          disabled={isCreating}
-          onClick={createNewWorkflow}
-          variant="primary"
-        >
-          <Plus aria-hidden="true" className="size-4" />
-          {isCreating ? "Creating" : "Create New Workflow"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={isCreatingSample}
+            onClick={createSampleMarketingWorkflow}
+            variant="secondary"
+          >
+            <Sparkles aria-hidden="true" className="size-4 text-primary" />
+            {isCreatingSample ? "Creating" : "Sample Workflow"}
+          </Button>
+          <Button
+            disabled={isCreating}
+            onClick={createNewWorkflow}
+            variant="primary"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            {isCreating ? "Creating" : "Create New Workflow"}
+          </Button>
+        </div>
       </div>
 
       {errorMessage ? (
@@ -207,6 +244,15 @@ export function DashboardWorkflowList({
               >
                 <Plus aria-hidden="true" className="size-4" />
                 Create New Workflow
+              </Button>
+              <Button
+                className="mt-3"
+                disabled={isCreatingSample}
+                onClick={createSampleMarketingWorkflow}
+                variant="secondary"
+              >
+                <Sparkles aria-hidden="true" className="size-4 text-primary" />
+                {isCreatingSample ? "Creating" : "Open Sample Workflow"}
               </Button>
             </div>
           </div>

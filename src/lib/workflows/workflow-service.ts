@@ -1,6 +1,7 @@
 import { Prisma, WorkflowStatus } from "@/generated/prisma/client";
 import { getPrismaClient } from "@/lib/db/prisma";
 import { createDefaultWorkflowGraph } from "@/lib/graph/create-default-workflow-graph";
+import { createSampleWorkflowGraph } from "@/lib/graph/create-sample-workflow-graph";
 import {
   mapWorkflowToDetail,
   mapWorkflowToSummary,
@@ -28,9 +29,15 @@ export async function listWorkflowSummaries(clerkUserId: string) {
 }
 
 export async function createWorkflow(clerkUserId: string, name: string) {
-  const prisma = getPrismaClient();
-  const graph = createDefaultWorkflowGraph();
+  return createWorkflowFromGraph(clerkUserId, name, createDefaultWorkflowGraph());
+}
 
+export async function createWorkflowFromGraph(
+  clerkUserId: string,
+  name: string,
+  graph: WorkflowGraph,
+) {
+  const prisma = getPrismaClient();
   const workflow = await prisma.workflow.create({
     data: {
       clerkUserId,
@@ -41,6 +48,14 @@ export async function createWorkflow(clerkUserId: string, name: string) {
   });
 
   return mapWorkflowToDetail(workflow);
+}
+
+export async function createSampleWorkflow(clerkUserId: string) {
+  return createWorkflowFromGraph(
+    clerkUserId,
+    "Sample Marketing Workflow",
+    createSampleWorkflowGraph(),
+  );
 }
 
 export async function getWorkflowForUser(

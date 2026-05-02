@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { WORKFLOW_GRAPH_SCHEMA_VERSION } from "@/config/workflow";
 import { workflowGraphSchema } from "@/lib/validation/workflow-schemas";
 
 export const workflowNameSchema = z
@@ -28,6 +29,22 @@ export const updateWorkflowSchema = z
     message: "Provide a workflow name or graph update.",
   });
 
+export const exportedWorkflowSchema = z
+  .object({
+    application: z.literal("NextFlow"),
+    schemaVersion: z.literal(WORKFLOW_GRAPH_SCHEMA_VERSION),
+    exportedAt: z.string().datetime(),
+    name: workflowNameSchema,
+    graph: workflowGraphSchema,
+  })
+  .strict();
+
+export const importWorkflowSchema = z.union([
+  workflowGraphSchema.transform((graph) => ({ graph })),
+  exportedWorkflowSchema.transform((value) => ({ graph: value.graph })),
+]);
+
 export type CreateWorkflowInput = z.infer<typeof createWorkflowSchema>;
 export type UpdateWorkflowInput = z.infer<typeof updateWorkflowSchema>;
-
+export type ExportedWorkflowInput = z.infer<typeof exportedWorkflowSchema>;
+export type ImportWorkflowInput = z.infer<typeof importWorkflowSchema>;
